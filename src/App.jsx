@@ -494,7 +494,7 @@ function NarrativeDesk() {
           <div className="editor-heading">
             <div>
               <p className="step-label">Your draft</p>
-              <h2 id="workspace-title">Paste your product narrative</h2>
+              <h2 id="workspace-title">Share your product narrative</h2>
             </div>
             <span className="limit-label">Up to 1,000 words</span>
           </div>
