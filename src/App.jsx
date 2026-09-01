@@ -27,8 +27,133 @@ const BrandMark = () => (
   </div>
 );
 
+function LandingPage() {
+  return (
+    <main className="landing-page">
+      <header className="landing-header">
+        <a className="brand" href="/" aria-label="Narrative Desk home">
+          <BrandMark />
+          <span>Narrative Desk</span>
+        </a>
+        <nav className="landing-nav" aria-label="Main navigation">
+          <a href="#how-it-works">How it works</a>
+          <a className="landing-sign-in" href="/app?mode=signin">Sign in</a>
+        </nav>
+      </header>
+
+      <section className="landing-hero">
+        <div className="landing-hero-copy">
+          <p className="eyebrow">AI narrative review for product marketers</p>
+          <h1>Find the story your product is trying to tell.</h1>
+          <p>
+            Bring your draft. See what works, fix what doesn’t, and shape it
+            into the perfect product narrative.
+          </p>
+          <div className="landing-actions">
+            <a className="landing-primary-button" href="/app?mode=signup">
+              Analyze your narrative <span aria-hidden="true">→</span>
+            </a>
+          </div>
+          <ul className="landing-proof-list" aria-label="Product highlights">
+            <li>Six clear scores</li>
+            <li>Three tailored rewrites</li>
+            <li>Your product facts preserved</li>
+          </ul>
+        </div>
+
+        <div className="landing-preview" aria-label="Example narrative analysis">
+          <div className="preview-topline">
+            <span>Example review</span>
+            <span>Software · Marketing leaders</span>
+          </div>
+          <div className="preview-score-row">
+            <div>
+              <span>Audience clarity</span>
+              <strong>4<small>/5</small></strong>
+            </div>
+            <p>The audience is specific, but their immediate challenge could appear sooner.</p>
+          </div>
+          <div className="preview-rewrite">
+            <span>Alternate direction</span>
+            <h2>Lead with the launch problem</h2>
+            <p>
+              Launch messaging gets harder when every team tells a different
+              version of the product story. Narrative Desk helps marketing
+              leaders find the clearest one before launch day.
+            </p>
+          </div>
+          <div className="preview-options" aria-hidden="true">
+            <span className="active">01</span><span>02</span><span>03</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-steps" id="how-it-works" aria-labelledby="steps-title">
+        <div className="landing-section-heading">
+          <p className="eyebrow">From draft to direction</p>
+          <h2 id="steps-title">A clearer narrative in three steps.</h2>
+        </div>
+        <div className="landing-step-grid">
+          <article>
+            <span>01</span>
+            <h3>Bring the draft</h3>
+            <p>Paste up to 1,000 words and add the audience and emotion you want to reach.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>See what lands</h3>
+            <p>Get six explained scores covering clarity, value, differentiation, credibility, and fit.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Choose a direction</h3>
+            <p>Compare three rewrites that stay close to your length and preserve the facts you supplied.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="landing-trust" aria-labelledby="trust-title">
+        <div>
+          <p className="eyebrow">Built for honest review</p>
+          <h2 id="trust-title">Make the story stronger. Keep the facts intact.</h2>
+        </div>
+        <div className="landing-trust-copy">
+          <p>
+            Narrative Desk works with the facts in your draft. It does not add
+            invented customers, performance numbers, testimonials, or product capabilities.
+          </p>
+          <p>
+            Every analysis is saved privately to your account, so you can return
+            to the scorecard and rewrites when your launch work continues.
+          </p>
+        </div>
+      </section>
+
+      <section className="landing-final-cta">
+        <p className="eyebrow">Your next launch starts with the story</p>
+        <h2>Find the narrative your product is trying to tell.</h2>
+        <a className="landing-primary-button" href="/app?mode=signup">
+          Analyze your narrative <span aria-hidden="true">→</span>
+        </a>
+      </section>
+
+      <footer className="landing-footer">
+        <a className="brand" href="/" aria-label="Narrative Desk home">
+          <BrandMark />
+          <span>Narrative Desk</span>
+        </a>
+        <p>Product narrative review for clearer launches.</p>
+      </footer>
+    </main>
+  );
+}
+
 function AuthScreen() {
-  const [mode, setMode] = useState("signIn");
+  const [mode, setMode] = useState(() =>
+    new URLSearchParams(window.location.search).get("mode") === "signup"
+      ? "signUp"
+      : "signIn",
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -359,19 +484,6 @@ function NarrativeDesk() {
         </section>
       ) : (
         <>
-      <section className="intro" aria-labelledby="page-title">
-        <p className="eyebrow">Product narrative review</p>
-        <h1 id="page-title">
-          Find the story your
-          <br />
-          product is trying to tell.
-        </h1>
-        <p className="intro-copy">
-          Bring your draft. See what works, fix what doesn’t, and shape it into
-          the perfect product narrative.
-        </p>
-      </section>
-
       <section className="workspace" aria-labelledby="workspace-title">
         <aside className="margin-note">
           <span className="note-rule" aria-hidden="true" />
@@ -591,6 +703,10 @@ function NarrativeDesk() {
 }
 
 function App() {
+  if (!window.location.pathname.startsWith("/app")) {
+    return <LandingPage />;
+  }
+
   return (
     <>
       <AuthLoading>
