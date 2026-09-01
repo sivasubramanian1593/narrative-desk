@@ -1,5 +1,14 @@
 import { useState } from "react";
+import {
+  Authenticated,
+  AuthLoading,
+  Unauthenticated,
+  useMutation,
+  useQuery,
+} from "convex/react";
+import { api } from "../convex/_generated/api";
 import { countWords } from "./countWords";
+import { authClient } from "./auth-client";
 
 const MAX_WORDS = 1000;
 
@@ -18,7 +27,109 @@ const BrandMark = () => (
   </div>
 );
 
-function App() {
+function AuthScreen() {
+  const [mode, setMode] = useState("signIn");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const isSignUp = mode === "signUp";
+
+  const handleAuth = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setAuthError("");
+
+    const result = isSignUp
+      ? await authClient.signUp.email({ name, email, password })
+      : await authClient.signIn.email({ email, password, rememberMe: true });
+
+    if (result.error) {
+      setAuthError(result.error.message || "We couldn’t complete that request.");
+    }
+    setIsSubmitting(false);
+  };
+
+  const switchMode = () => {
+    setMode(isSignUp ? "signIn" : "signUp");
+    setAuthError("");
+  };
+
+  return (
+    <main className="auth-page">
+      <a className="brand auth-brand" href="/" aria-label="Narrative Desk home">
+        <BrandMark />
+        <span>Narrative Desk</span>
+      </a>
+      <section className="auth-card" aria-labelledby="auth-title">
+        <p className="eyebrow">Your private narrative workspace</p>
+        <h1 id="auth-title">{isSignUp ? "Create your account" : "Welcome back"}</h1>
+        <p className="auth-intro">
+          {isSignUp
+            ? "Create an account to start shaping stronger product stories."
+            : "Sign in to continue working on your product narrative."}
+        </p>
+
+        <form className="auth-form" onSubmit={handleAuth}>
+          {isSignUp ? (
+            <div className="field-group">
+              <label htmlFor="auth-name">Name</label>
+              <input
+                id="auth-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                autoComplete="name"
+                required
+              />
+            </div>
+          ) : null}
+          <div className="field-group">
+            <label htmlFor="auth-email">Email</label>
+            <input
+              id="auth-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div className="field-group">
+            <label htmlFor="auth-password">Password</label>
+            <input
+              id="auth-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete={isSignUp ? "new-password" : "current-password"}
+              minLength={8}
+              required
+            />
+            {isSignUp ? <small>Use at least 8 characters.</small> : null}
+          </div>
+
+          {authError ? <p className="auth-error" role="alert">{authError}</p> : null}
+
+          <button className="auth-submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Please wait…" : isSignUp ? "Create account" : "Sign in"}
+          </button>
+        </form>
+
+        <p className="auth-switch">
+          {isSignUp ? "Already have an account?" : "New to Narrative Desk?"}{" "}
+          <button type="button" onClick={switchMode}>
+            {isSignUp ? "Sign in" : "Create an account"}
+          </button>
+        </p>
+      </section>
+    </main>
+  );
+}
+
+function NarrativeDesk() {
+  const [view, setView] = useState("analyzer");
+  const [selectedAnalysis, setSelectedAnalysis] = useState(null);
   const [narrative, setNarrative] = useState("");
   const [marketType, setMarketType] = useState("");
   const [audience, setAudience] = useState("");
@@ -28,6 +139,8 @@ function App() {
   const [error, setError] = useState("");
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [copyErrorIndex, setCopyErrorIndex] = useState(null);
+  const saveAnalysis = useMutation(api.analyses.save);
+  const savedAnalyses = useQuery(api.analyses.list);
   const wordCount = countWords(narrative);
   const isOverLimit = wordCount > MAX_WORDS;
   const isFormValid =
@@ -60,6 +173,14 @@ function App() {
         throw new Error(result.error);
       }
 
+      await saveAnalysis({
+        narrative,
+        marketType,
+        audience,
+        emotion,
+        scores: result.scores,
+        alternatives: result.alternatives,
+      });
       setAnalysis(result);
     } catch {
       setError("We couldn’t analyze this narrative. Please try again.");
@@ -89,6 +210,19 @@ function App() {
     }
   };
 
+  const handleHeaderNavigation = () => {
+    if (view === "detail") {
+      setView("history");
+      return;
+    }
+    setView(view === "history" ? "analyzer" : "history");
+  };
+
+  const openSavedAnalysis = (savedAnalysis) => {
+    setSelectedAnalysis(savedAnalysis);
+    setView("detail");
+  };
+
   return (
     <main className="page-shell">
       <header className="site-header">
@@ -96,9 +230,135 @@ function App() {
           <BrandMark />
           <span>Narrative Desk</span>
         </a>
-        <span className="stage-label">Private working draft</span>
+        <div className="account-actions">
+          <span className="stage-label">Private working draft</span>
+          <button
+            className="header-action-button"
+            type="button"
+            onClick={handleHeaderNavigation}
+          >
+            {view === "detail"
+              ? "Back to history"
+              : view === "history"
+                ? "Back to analyzer"
+                : "History"}
+          </button>
+          <button className="sign-out-button" type="button" onClick={() => authClient.signOut()}>
+            Sign out
+          </button>
+        </div>
       </header>
 
+      {view === "history" ? (
+        <section className="history-section" aria-labelledby="history-title">
+          <p className="eyebrow">Your saved work</p>
+          <h1 id="history-title">Analysis history</h1>
+          <p className="history-intro">Your latest narrative reviews appear first.</p>
+
+          {savedAnalyses === undefined ? (
+            <p className="history-state" role="status">Loading your history…</p>
+          ) : savedAnalyses.length === 0 ? (
+            <div className="history-state">
+              <h2>No saved analyses yet</h2>
+              <p>Your next completed analysis will appear here automatically.</p>
+              <button type="button" onClick={() => setView("analyzer")}>Analyze a narrative</button>
+            </div>
+          ) : (
+            <div className="history-list">
+              {savedAnalyses.map((item) => (
+                <button
+                  className="history-card"
+                  type="button"
+                  key={item._id}
+                  onClick={() => openSavedAnalysis(item)}
+                >
+                  <div className="history-date-row">
+                    <time dateTime={new Date(item.createdAt).toISOString()}>
+                      {new Intl.DateTimeFormat("en", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }).format(item.createdAt)}
+                    </time>
+                  </div>
+                  <div className="history-card-context">
+                    <strong>{item.marketType}</strong>
+                    <span>{item.audience}</span>
+                  </div>
+                  <span className="history-narrative">{item.narrative}</span>
+                  <span className="history-card-footer">
+                    <span className="history-emotion">Designed for {item.emotion.toLowerCase()}</span>
+                    <span className="history-arrow" aria-hidden="true">→</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : view === "detail" && selectedAnalysis ? (
+        <section className="saved-detail" aria-labelledby="saved-detail-title">
+          <div className="saved-detail-heading">
+            <div>
+              <p className="eyebrow">Saved analysis</p>
+              <h1 id="saved-detail-title">Narrative review</h1>
+            </div>
+            <time dateTime={new Date(selectedAnalysis.createdAt).toISOString()}>
+              {new Intl.DateTimeFormat("en", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              }).format(selectedAnalysis.createdAt)}
+            </time>
+          </div>
+
+          <div className="saved-context">
+            <div><span>Market type</span><strong>{selectedAnalysis.marketType}</strong></div>
+            <div><span>Industry and persona</span><strong>{selectedAnalysis.audience}</strong></div>
+            <div><span>Desired emotion</span><strong>{selectedAnalysis.emotion}</strong></div>
+          </div>
+
+          <article className="saved-narrative">
+            <p className="step-label">Original narrative</p>
+            <p>{selectedAnalysis.narrative}</p>
+          </article>
+
+          <div className="results-heading saved-results-heading">
+            <p className="eyebrow">AI narrative review</p>
+            <h2>Your narrative scorecard</h2>
+          </div>
+          <div className="score-grid">
+            {Object.entries(SCORE_LABELS).map(([key, label]) => {
+              const item = selectedAnalysis.scores[key];
+              return (
+                <article className="score-card" key={key}>
+                  <div className="score-card-heading">
+                    <h3>{label}</h3>
+                    <span className="score-number">{item.score}<small>/5</small></span>
+                  </div>
+                  <p>{item.explanation}</p>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="alternatives-heading">
+            <p className="eyebrow">Three directions</p>
+            <h2>Alternate narratives</h2>
+          </div>
+          <div className="alternatives-list">
+            {selectedAnalysis.alternatives.map((alternative, index) => (
+              <article className="alternative-card" key={`${alternative.title}-${index}`}>
+                <div className="alternative-card-heading">
+                  <span>Option {index + 1}</span>
+                  <span>{countWords(alternative.narrative).toLocaleString()} words</span>
+                </div>
+                <h3>{alternative.title}</h3>
+                <p>{alternative.narrative}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <>
       <section className="intro" aria-labelledby="page-title">
         <p className="eyebrow">Product narrative review</p>
         <h1 id="page-title">
@@ -324,7 +584,28 @@ function App() {
           </div>
         </section>
       ) : null}
+        </>
+      )}
     </main>
+  );
+}
+
+function App() {
+  return (
+    <>
+      <AuthLoading>
+        <main className="auth-page auth-loading" role="status">
+          <BrandMark />
+          <p>Opening Narrative Desk…</p>
+        </main>
+      </AuthLoading>
+      <Unauthenticated>
+        <AuthScreen />
+      </Unauthenticated>
+      <Authenticated>
+        <NarrativeDesk />
+      </Authenticated>
+    </>
   );
 }
 

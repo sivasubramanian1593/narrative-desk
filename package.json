@@ -9,10 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@convex-dev/better-auth": "^0.12.5",
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "better-auth": "~1.6.15",
+    "convex": "^1.45.0",
     "react": "latest",
-    "react-dom": "latest"
-  },
-  "devDependencies": {}
+    "react-dom": "latest",
+    "vite": "latest"
+  }
 }
